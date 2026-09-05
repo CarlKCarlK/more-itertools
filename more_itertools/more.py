@@ -3861,7 +3861,8 @@ def _sample_unweighted(iterator, k, strict):
 
     # K=1 case of the skip method from Park et al. (2004):
     # "Reservoir-based Random Sampling with Replacement from Data Stream".
-    # Reduces 3 calls to random() to 1. https://doi.org/10.1137/1.9781611972740.53
+    # Reduces three random draws to one.
+    # https://doi.org/10.1137/1.9781611972740.53
     if k == 1:
         if not reservoir:
             return reservoir
@@ -3893,7 +3894,7 @@ def _sample_unweighted(iterator, k, strict):
 def _sample_weighted(iterator, k, weights, strict):
     # K=1 case of the skip method from Meligrana and Fazzone (2026):
     # "Weighted Reservoir Sampling with Replacement from Data Streams".
-    # Reduces 2 calls to random() to 1.
+    # Reduces two random draws to one.
     # https://doi.org/10.1145/3774904.3792966
     if k == 1:
         reservoir = take(1, zip(weights, iterator))
