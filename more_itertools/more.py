@@ -3855,12 +3855,28 @@ def map_if(iterable, pred, func, func_else=None):
 
 
 def _sample_unweighted(iterator, k, strict):
-    # Algorithm L in the 1994 paper by Kim-Hung Li:
-    # "Reservoir-Sampling Algorithms of Time Complexity O(n(1+log(N/n)))".
-
     reservoir = list(islice(iterator, k))
     if strict and len(reservoir) < k:
         raise ValueError('Sample larger than population')
+
+    # K=1 case of the skip method from Park et al. (2004):
+    # "Reservoir-based Random Sampling with Replacement from Data Stream".
+    # Reduces 3 calls to random() to 1. https://doi.org/10.1137/1.9781611972740.53
+    if k == 1:
+        if not reservoir:
+            return reservoir
+
+        seen = 1
+        with suppress(StopIteration):
+            while True:
+                q = random()
+                offset = max(ceil(q * seen / (1 - q)), 1)
+                reservoir[0] = next(islice(iterator, offset - 1, None))
+                seen += offset
+        return reservoir
+
+    # Algorithm L in the 1994 paper by Kim-Hung Li:
+    # "Reservoir-Sampling Algorithms of Time Complexity O(n(1+log(N/n)))".
     W = 1.0
 
     with suppress(StopIteration):
@@ -3986,7 +4002,10 @@ def sample(iterable, k, weights=None, *, counts=None, strict=False):
     all elements are returned (in shuffled order) if *strict* is ``False``.
 
     By default, the `Algorithm L <https://w.wiki/ANrM>`__ reservoir sampling
-    technique is used. When *weights* are provided,
+    technique is used, except when *k* is 1, which uses the
+    `single-item skip method
+    <https://doi.org/10.1137/1.9781611972740.53>`__. When *weights* are
+    provided,
     `Algorithm A-ExpJ <https://w.wiki/ANrS>`__ is used instead.
 
     Notes on reproducibility:

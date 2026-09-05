@@ -4580,6 +4580,9 @@ class SampleTests(TestCase):
         # in those underlying functions won't affect the sample.
 
         seed(8675309)
+        self.assertEqual(list(mi.sample(range(10**5), k=1)), [58724])
+
+        seed(8675309)
         self.assertEqual(
             list(mi.sample(range(10**5), k=5)),
             [16845, 79805, 76057, 58302, 40472],
@@ -4618,11 +4621,17 @@ class SampleTests(TestCase):
     def test_length(self):
         """Check that *k* elements are sampled."""
         data = [1, 2, 3, 4, 5]
-        for k in [0, 3, 5, 7]:
+        for k in [0, 1, 3, 5, 7]:
             sampled = mi.sample(data, k=k)
             actual = len(sampled)
             expected = min(k, len(data))
             self.assertEqual(actual, expected)
+
+    def test_k_one_edge_cases(self):
+        self.assertEqual(mi.sample([], 1), [])
+        with self.assertRaises(ValueError):
+            mi.sample([], 1, strict=True)
+        self.assertEqual(mi.sample(['a'], 1), ['a'])
 
     def test_strict(self):
         data = ['1', '2', '3', '4', '5']
