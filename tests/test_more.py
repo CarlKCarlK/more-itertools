@@ -4584,6 +4584,16 @@ class SampleTests(TestCase):
 
         seed(8675309)
         self.assertEqual(
+            list(
+                mi.sample(
+                    range(10**5), k=1, weights=range(1, 10**5 + 1)
+                )
+            ),
+            [90071],
+        )
+
+        seed(8675309)
+        self.assertEqual(
             list(mi.sample(range(10**5), k=5)),
             [16845, 79805, 76057, 58302, 40472],
         )
@@ -4633,6 +4643,15 @@ class SampleTests(TestCase):
             mi.sample([], 1, strict=True)
         self.assertEqual(mi.sample(['a'], 1), ['a'])
 
+        self.assertEqual(mi.sample([], 1, weights=[]), [])
+        with self.assertRaises(ValueError):
+            mi.sample([], 1, weights=[], strict=True)
+        self.assertEqual(mi.sample(['a'], 1, weights=[1]), ['a'])
+
+        with mock.patch('more_itertools.more.random', return_value=0.0):
+            self.assertEqual(mi.sample(['a', 'b'], 1), ['b'])
+            self.assertEqual(mi.sample(['a', 'b'], 1, weights=[1, 1]), ['b'])
+
     def test_strict(self):
         data = ['1', '2', '3', '4', '5']
         self.assertEqual(set(mi.sample(data, 6, strict=False)), set(data))
@@ -4672,15 +4691,28 @@ class SampleTests(TestCase):
         data = "abcdef"
 
         weights = list(range(1, len(data) + 1))
-        seed(123)
-        first_sample = mi.sample(data, k=2, weights=weights)
-
-        # Scale the weights and sample again
         weights_scaled = [w / 1e10 for w in weights]
-        seed(123)
-        second_sample = mi.sample(data, k=2, weights=weights_scaled)
 
-        self.assertEqual(first_sample, second_sample)
+        for k in [1, 2]:
+            seed(123)
+            first_sample = mi.sample(data, k=k, weights=weights)
+
+            # Scale the weights and sample again
+            seed(123)
+            second_sample = mi.sample(data, k=k, weights=weights_scaled)
+
+            self.assertEqual(first_sample, second_sample)
+
+    def test_k_one_unit_weights_match_unweighted(self):
+        data = range(10**5)
+
+        seed(8675309)
+        unweighted_sample = mi.sample(data, k=1)
+
+        seed(8675309)
+        weighted_sample = mi.sample(data, k=1, weights=repeat(1))
+
+        self.assertEqual(weighted_sample, unweighted_sample)
 
     def test_invariance_under_permutations_unweighted(self):
         """The order of the data should not matter. This is a stochastic test,

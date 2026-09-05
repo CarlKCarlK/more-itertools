@@ -3891,6 +3891,30 @@ def _sample_unweighted(iterator, k, strict):
 
 
 def _sample_weighted(iterator, k, weights, strict):
+    # K=1 case of the skip method from Meligrana and Fazzone (2026):
+    # "Weighted Reservoir Sampling with Replacement from Data Streams".
+    # Reduces 2 calls to random() to 1.
+    # https://doi.org/10.1145/3774904.3792966
+    if k == 1:
+        reservoir = take(1, zip(weights, iterator))
+        if strict and not reservoir:
+            raise ValueError('Sample larger than population')
+        if not reservoir:
+            return []
+
+        cumulative_weight, element = reservoir[0]
+        q = 1.0 - random()
+        weight_threshold = cumulative_weight / q
+
+        for weight, new_element in zip(weights, iterator):
+            cumulative_weight += weight
+            if cumulative_weight >= weight_threshold:
+                element = new_element
+                q = 1.0 - random()
+                weight_threshold = cumulative_weight / q
+
+        return [element]
+
     # Implementation of "A-ExpJ" from the 2006 paper by Efraimidis et al. :
     # "Weighted random sampling with a reservoir".
 
@@ -4005,8 +4029,9 @@ def sample(iterable, k, weights=None, *, counts=None, strict=False):
     technique is used, except when *k* is 1, which uses the
     `single-item skip method
     <https://doi.org/10.1137/1.9781611972740.53>`__. When *weights* are
-    provided,
-    `Algorithm A-ExpJ <https://w.wiki/ANrS>`__ is used instead.
+    provided, `Algorithm A-ExpJ <https://w.wiki/ANrS>`__ is used instead,
+    except when *k* is 1, which uses the `weighted single-item skip method
+    <https://doi.org/10.1145/3774904.3792966>`__.
 
     Notes on reproducibility:
 
